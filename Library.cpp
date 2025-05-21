@@ -16,9 +16,9 @@ void addBook() {
     cin >> library[count].id;
     cin.ignore();
     cout << "Enter Title: ";
-    cin >> library[count].title;
+    getline(cin, library[count].title);
     cout << "Enter Book Author: ";
-    cin >> library[count].author;
+    getline(cin, library[count].author);
     count++;
 }
 
