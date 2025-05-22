@@ -4,7 +4,7 @@
 #include <sstream>
 #include <string>
 #include <algorithm>
-#include <cstdlib>
+
 using namespace std;
 
 struct Hospital {
@@ -43,7 +43,6 @@ void saveHospitals() {
     for (auto& h : hospitals) {
         file << h.id << "," << h.name << "," << h.location << "," << h.patients << "\n";
     }
-    file.close();
 }
 
 void saveEdges() {
@@ -51,14 +50,12 @@ void saveEdges() {
     for (auto& e : edges) {
         file << e.fromId << "," << e.toId << "," << e.distance << "\n";
     }
-    file.close();
 }
 
 void loadHospitals() {
     hospitals.clear();
     ifstream file("hospitals.csv");
     string line;
-    int maxId = 0;
     while (getline(file, line)) {
         stringstream ss(line);
         string idStr, name, location, patientsStr;
@@ -66,12 +63,10 @@ void loadHospitals() {
         getline(ss, name, ',');
         getline(ss, location, ',');
         getline(ss, patientsStr);
-        int id = stoi(idStr);
-        maxId = max(maxId, id);
-        hospitals.push_back({id, name, location, stoi(patientsStr)});
+        Hospital h = {stoi(idStr), name, location, stoi(patientsStr)};
+        hospitals.push_back(h);
+        nextHospitalId = max(nextHospitalId, h.id + 1);
     }
-    file.close();
-    nextHospitalId = maxId + 1;
 }
 
 void loadEdges() {
@@ -80,19 +75,18 @@ void loadEdges() {
     string line;
     while (getline(file, line)) {
         stringstream ss(line);
-        string fromStr, toStr, distanceStr;
+        string fromStr, toStr, distStr;
         getline(ss, fromStr, ',');
         getline(ss, toStr, ',');
-        getline(ss, distanceStr);
-        edges.push_back({stoi(fromStr), stoi(toStr), stoi(distanceStr)});
+        getline(ss, distStr);
+        edges.push_back({stoi(fromStr), stoi(toStr), stoi(distStr)});
     }
-    file.close();
 }
 
 void viewHospitals() {
     cout << "\n Registered Hospitals:\n";
     for (auto& h : hospitals) {
-        cout << h.id << ": " << h.name << " | Location: " << h.location << " | Patients: " << h.patients << "\n";
+        cout << "- ID: " << h.id << " | Name: " << h.name << " | Location: " << h.location << " | Patients: " << h.patients << "\n";
     }
 }
 
@@ -117,16 +111,17 @@ void updateHospital() {
     cout << "Enter hospital ID to update: ";
     cin >> id;
     Hospital* h = findHospitalById(id);
-    if (h) {
-        cout << "New Location: ";
-        cin >> h->location;
-        cout << "New Number of Patients: ";
-        cin >> h->patients;
-        saveHospitals();
-        cout << " Hospital updated!\n";
-    } else {
+    if (!h) {
         cout << " Hospital not found.\n";
+        return;
     }
+    cout << "New Location: ";
+    cin.ignore();
+    getline(cin, h->location);
+    cout << "New Number of Patients: ";
+    cin >> h->patients;
+    saveHospitals();
+    cout << " Hospital updated!\n";
 }
 
 void deleteHospital() {
@@ -138,11 +133,7 @@ void deleteHospital() {
     });
     if (it != hospitals.end()) {
         hospitals.erase(it, hospitals.end());
-        edges.erase(remove_if(edges.begin(), edges.end(), [&](Edge e) {
-            return e.fromId == id || e.toId == id;
-        }), edges.end());
         saveHospitals();
-        saveEdges();
         cout << " Hospital deleted!\n";
     } else {
         cout << " Hospital not found.\n";
@@ -151,15 +142,17 @@ void deleteHospital() {
 
 void linkHospitals() {
     int fromId, toId, distance;
-    cout << "Link From (Hospital ID): ";
+    cout << "From Hospital ID: ";
     cin >> fromId;
-    cout << "Link To (Hospital ID): ";
+    cout << "To Hospital ID: ";
     cin >> toId;
+
     if (!findHospitalById(fromId) || !findHospitalById(toId)) {
-        cout << " One or both hospitals do not exist.\n";
+        cout << " One or both hospitals not found.\n";
         return;
     }
-    cout << "Distance (in KM): ";
+
+    cout << "Distance (km): ";
     cin >> distance;
     edges.push_back({fromId, toId, distance});
     saveEdges();
@@ -171,8 +164,9 @@ void viewGraph() {
     for (auto& e : edges) {
         Hospital* from = findHospitalById(e.fromId);
         Hospital* to = findHospitalById(e.toId);
-        if (from && to)
+        if (from && to) {
             cout << from->name << " --- " << to->name << " : " << e.distance << "km\n";
+        }
     }
 }
 
@@ -181,21 +175,18 @@ void visualizeGraph() {
     dotFile << "graph HospitalNetwork {\n";
     dotFile << "  node [shape=circle, style=filled, color=lightblue];\n";
 
-    for (const auto& e : edges) {
+    for (auto& e : edges) {
         Hospital* from = findHospitalById(e.fromId);
         Hospital* to = findHospitalById(e.toId);
-        if (from && to)
+        if (from && to) {
             dotFile << "  \"" << from->name << "\" -- \"" << to->name << "\" [label=\"" << e.distance << "km\"];\n";
+        }
     }
 
     dotFile << "}\n";
     dotFile.close();
 
-    int result = system("dot -Tpng graph.dot -o graph.png");
-    if (result != 0) {
-        cout << " Error: Graphviz 'dot' command not found. Make sure Graphviz is installed and 'dot' is in your PATH.\n";
-        return;
-    }
+    system("\"C:\\Program Files\\Graphviz\\bin\\dot.exe\" -Tpng graph.dot -o graph.png");
 
     cout << " Graph image 'graph.png' created!\n";
 
@@ -234,7 +225,7 @@ int main() {
             case 5: linkHospitals(); break;
             case 6: viewGraph(); break;
             case 7: visualizeGraph(); break;
-            case 8: cout << "Thank you for using our system.\n"; break;
+            case 8: cout << "Thank you for using our system \n"; break;
             default: cout << " Invalid choice!\n"; break;
         }
     } while (choice != 8);
